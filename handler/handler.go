@@ -31,6 +31,100 @@ func NewHandlers(app *Application) *Handlers {
 	return &Handlers{App: app}
 }
 
+// SchedulerHistoryAPI mengembalikan history terbaru (untuk animasi row baru di tabel)
+func (h *Handlers) SchedulerHistoryAPI(w http.ResponseWriter, r *http.Request) {
+	limit := 30
+	if v := r.URL.Query().Get("limit"); v != "" {
+		if n, convErr := strconv.Atoi(v); convErr == nil && n > 0 && n <= 200 {
+			limit = n
+		}
+	}
+
+	qrange := r.URL.Query().Get("range")
+	now := time.Now()
+	var since time.Time
+	switch qrange {
+	case "1s":
+		since = now.Add(-1 * time.Second)
+	case "10s":
+		since = now.Add(-10 * time.Second)
+	case "30s":
+		since = now.Add(-30 * time.Second)
+	case "1min":
+		since = now.Add(-1 * time.Minute)
+	case "1h":
+		since = now.Add(-1 * time.Hour)
+	case "4h":
+		since = now.Add(-4 * time.Hour)
+	case "1d":
+		since = now.Add(-24 * time.Hour)
+	case "1w":
+		since = now.Add(-7 * 24 * time.Hour)
+	case "1m":
+		since = now.Add(-30 * 24 * time.Hour)
+	}
+
+	var (
+		history []models.ProbeHistory
+		err     error
+	)
+	if !since.IsZero() {
+		history, err = h.App.Store.GetAllProbeHistoryByRangePaged(since, limit, 0)
+	} else {
+		history, err = h.App.Store.GetAllProbeHistory(limit)
+	}
+	if err != nil {
+		log.Printf("SchedulerHistoryAPI: %v", err)
+		http.Error(w, `{"error":"failed to get history"}`, http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(history)
+}
+
+// URLsAPI mengembalikan data URL terbaru untuk update real-time halaman /urls
+func (h *Handlers) URLsAPI(w http.ResponseWriter, r *http.Request) {
+	urls, err := h.App.Store.GetAllURLs()
+	if err != nil {
+		log.Printf("URLsAPI: %v", err)
+		http.Error(w, `{"error":"failed to get urls"}`, http.StatusInternalServerError)
+		return
+	}
+
+	type urlDTO struct {
+		ID              int       `json:"ID"`
+		URL             string    `json:"URL"`
+		ProbeMode       string    `json:"ProbeMode"`
+		LastStatus      int       `json:"LastStatus"`
+		LastLatencyMs   int64     `json:"LastLatencyMs"`
+		LastChecked     time.Time `json:"LastChecked"`
+		IsUp            bool      `json:"IsUp"`
+		TotalProbeCount int64     `json:"TotalProbeCount"`
+		TotalLatencySum int64     `json:"TotalLatencySum"`
+		Uptime          string    `json:"Uptime"`
+	}
+
+	out := make([]urlDTO, 0, len(urls))
+	for i := range urls {
+		u := urls[i]
+		out = append(out, urlDTO{
+			ID:              u.ID,
+			URL:             u.URL,
+			ProbeMode:       u.ProbeMode,
+			LastStatus:      u.LastStatus,
+			LastLatencyMs:   u.LastLatencyMs,
+			LastChecked:     u.LastChecked,
+			IsUp:            u.IsUp,
+			TotalProbeCount: u.TotalProbeCount,
+			TotalLatencySum: u.TotalLatencySum,
+			Uptime:          u.GetUptime(),
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(out)
+}
+
 // === HANDLER HALAMAN ===
 
 // DashboardPage menangani halaman utama ('/')
@@ -63,6 +157,14 @@ func (h *Handlers) DashboardPage(w http.ResponseWriter, r *http.Request) {
 		var since time.Time
 		now := time.Now()
 		switch qrange {
+		case "1s":
+			since = now.Add(-1 * time.Second)
+		case "10s":
+			since = now.Add(-10 * time.Second)
+		case "30s":
+			since = now.Add(-30 * time.Second)
+		case "1min":
+			since = now.Add(-1 * time.Minute)
 		case "1h":
 			since = now.Add(-1 * time.Hour)
 		case "4h":
@@ -189,8 +291,39 @@ func (h *Handlers) SchedulerPage(w http.ResponseWriter, r *http.Request) {
 	}
 	offset := (pageNum - 1) * pageSize
 
-	totalItems, _ := h.App.Store.CountProbeHistory()
-	historyData, err := h.App.Store.GetAllProbeHistoryPaged(pageSize, offset)
+	qrange := r.URL.Query().Get("range")
+	now := time.Now()
+	var since time.Time
+	switch qrange {
+	case "1s":
+		since = now.Add(-1 * time.Second)
+	case "10s":
+		since = now.Add(-10 * time.Second)
+	case "30s":
+		since = now.Add(-30 * time.Second)
+	case "1min":
+		since = now.Add(-1 * time.Minute)
+	case "1h":
+		since = now.Add(-1 * time.Hour)
+	case "4h":
+		since = now.Add(-4 * time.Hour)
+	case "1d":
+		since = now.Add(-24 * time.Hour)
+	case "1w":
+		since = now.Add(-7 * 24 * time.Hour)
+	case "1m":
+		since = now.Add(-30 * 24 * time.Hour)
+	}
+
+	var totalItems int64
+	var historyData []models.ProbeHistory
+	if !since.IsZero() {
+		totalItems, _ = h.App.Store.CountProbeHistoryByRange(since)
+		historyData, err = h.App.Store.GetAllProbeHistoryByRangePaged(since, pageSize, offset)
+	} else {
+		totalItems, _ = h.App.Store.CountProbeHistory()
+		historyData, err = h.App.Store.GetAllProbeHistoryPaged(pageSize, offset)
+	}
 	if err != nil {
 		log.Printf("Gagal mengambil semua history: %v", err)
 	}
@@ -222,13 +355,14 @@ func (h *Handlers) SchedulerPage(w http.ResponseWriter, r *http.Request) {
 	data := models.PageData{
 		Page:            "scheduler",
 		CurrentInterval: interval,
-		LastCheckedTime: getLatestProbeTime(urls),
-		HistoryData:     historyData,
-		PageNumber:      pageNum,
-		PageSize:        pageSize,
-		TotalItems:      totalItems,
-		TotalPages:      totalPages,
-		NavigatorPages:  pages,
+		LastCheckedTime:  getLatestProbeTime(urls),
+		HistoryData:      historyData,
+		PageNumber:       pageNum,
+		PageSize:         pageSize,
+		TotalItems:       totalItems,
+		TotalPages:       totalPages,
+		NavigatorPages:   pages,
+		ChartRange:       qrange,
 	}
 
 	// Render template SCHEDULER
@@ -256,10 +390,16 @@ func (h *Handlers) AddURL(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/urls", http.StatusSeeOther)
 		return
 	}
-	if !((strings.HasPrefix(url, "http://")) || (strings.HasPrefix(url, "https://"))) {
+	mode := r.FormValue("mode")
+	if mode != "tcp" && mode != "icmp" {
+		mode = "http"
+	}
+
+	if mode == "http" && !((strings.HasPrefix(url, "http://")) || (strings.HasPrefix(url, "https://"))) {
 		url = "https://" + url
 	}
-	err := h.App.Store.AddURL(url)
+
+	err := h.App.Store.AddURLWithMode(url, mode)
 	if err != nil {
 		log.Printf("Gagal menambah URL: %v", err)
 	}
@@ -293,6 +433,9 @@ func (h *Handlers) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 
 	// Validasi input
 	validIntervals := map[string]bool{
+		"@every 1s":  true,
+		"@every 10s": true,
+		"@every 30s": true,
 		"@every 1m":  true,
 		"@every 5m":  true,
 		"@every 10m": true,
@@ -335,6 +478,49 @@ func calculateGlobalAvgLatency(urls []models.TargetURL) int64 {
 		return 0
 	}
 	return totalSum / totalCount
+}
+
+// ChartAPI mengembalikan data history dalam JSON untuk chart (refresh real-time)
+func (h *Handlers) ChartAPI(w http.ResponseWriter, r *http.Request) {
+	urlIDStr := r.URL.Query().Get("url_id")
+	rangeParam := r.URL.Query().Get("range")
+	urlID, _ := strconv.Atoi(urlIDStr)
+	if urlID <= 0 {
+		http.Error(w, `{"error":"url_id required"}`, http.StatusBadRequest)
+		return
+	}
+	var since time.Time
+	now := time.Now()
+	switch rangeParam {
+	case "1s":
+		since = now.Add(-1 * time.Second)
+	case "10s":
+		since = now.Add(-10 * time.Second)
+	case "30s":
+		since = now.Add(-30 * time.Second)
+	case "1min":
+		since = now.Add(-1 * time.Minute)
+	case "1h":
+		since = now.Add(-1 * time.Hour)
+	case "4h":
+		since = now.Add(-4 * time.Hour)
+	case "1d":
+		since = now.Add(-24 * time.Hour)
+	case "1w":
+		since = now.Add(-7 * 24 * time.Hour)
+	case "1m":
+		since = now.Add(-30 * 24 * time.Hour)
+	default:
+		since = now.Add(-24 * time.Hour)
+	}
+	historyData, err := h.App.Store.GetProbeHistoryByRange(urlID, since)
+	if err != nil {
+		log.Printf("ChartAPI: %v", err)
+		http.Error(w, `{"error":"failed to get history"}`, http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(historyData)
 }
 
 // getLatestProbeTime mencari waktu probe terbaru dari semua URL

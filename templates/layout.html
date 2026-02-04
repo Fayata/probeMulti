@@ -7,6 +7,8 @@
     <title>ID Probe - {{template "title" .}}</title>
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <script src="/static/chart.js"></script>
     {{template "head" .}}
 </head>
@@ -17,7 +19,7 @@
             <!-- <div class="logo-image">
                 <img src="/static/logo.png" alt="Awan Teknologi Inovasi">
             </div> -->
-            <h1>ID Probe Status</h1>
+            <h1>Probe</h1>
             <p>Monitoring System</p>
         </div>
 
@@ -69,10 +71,86 @@
 
     {{if eq .Page "dashboard"}}
     <script>
-        const historyData = JSON.parse('{{.HistoryData | js}}');
-        if (historyData && historyData.length > 0) {
-            initChart(historyData);
-        }
+        window.dashboardChartUrlId = {{.SelectedURLID}};
+        window.dashboardChartRange = "{{or .ChartRange "1d"}}";
+    </script>
+    {{end}}
+
+    {{if eq .Page "urls"}}
+    <script>
+        // Halaman URL: update real-time tanpa reload halaman
+        (function () {
+            const tbody = document.getElementById('urls_tbody');
+            if (!tbody) return;
+
+            function escapeHtml(s) {
+                return String(s ?? '')
+                    .replaceAll('&', '&amp;')
+                    .replaceAll('<', '&lt;')
+                    .replaceAll('>', '&gt;')
+                    .replaceAll('"', '&quot;')
+                    .replaceAll("'", '&#039;');
+            }
+
+            function formatTime(ts) {
+                if (!ts) return '-';
+                const d = new Date(ts);
+                if (isNaN(d.getTime())) return '-';
+                return d.toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            }
+
+            function rowHtml(u) {
+                const isUp = !!u.IsUp;
+                const statusBadge = isUp
+                    ? '<span class="status-badge status-up">Up</span>'
+                    : '<span class="status-badge status-down">Down</span>';
+                const avg = (u.TotalProbeCount && u.TotalProbeCount > 0) ? Math.round(u.TotalLatencySum / u.TotalProbeCount) + ' ms' : 'N/A';
+                const lastChecked = formatTime(u.LastChecked);
+                const mode = u.ProbeMode || 'http';
+
+                return (
+                    '<tr>' +
+                        '<td>' + statusBadge + '</td>' +
+                        '<td><a href="' + escapeHtml(u.URL) + '" class="url-link" target="_blank">' + escapeHtml(u.URL) + '</a></td>' +
+                        '<td><span class="status-code">' + escapeHtml(mode) + '</span></td>' +
+                        '<td><span class="status-code">' + (u.LastStatus ?? 0) + '</span></td>' +
+                        '<td class="latency">' + (u.LastLatencyMs ?? 0) + ' ms</td>' +
+                        '<td class="latency">' + escapeHtml(avg) + '</td>' +
+                        '<td>' + escapeHtml(u.Uptime ?? 'N/A') + '</td>' +
+                        '<td class="date-time">' + escapeHtml(lastChecked) + '</td>' +
+                        '<td>' +
+                            '<a href="/delete/' + encodeURIComponent(u.ID) + '" class="action-delete" onclick="return confirm(\'Yakin ingin menghapus ' + escapeHtml(u.URL) + '?\')">' +
+                                '<svg class="icon" fill="currentColor" viewBox="0 0 24 24">' +
+                                    '<path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />' +
+                                '</svg>' +
+                                'Delete' +
+                            '</a>' +
+                        '</td>' +
+                    '</tr>'
+                );
+            }
+
+            async function tick() {
+                try {
+                    const res = await fetch('/api/urls');
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    if (!Array.isArray(data)) return;
+
+                    tbody.innerHTML = '';
+                    if (data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No URLs available. Please add one.</td></tr>';
+                        return;
+                    }
+                    for (let i = 0; i < data.length; i++) {
+                        tbody.insertAdjacentHTML('beforeend', rowHtml(data[i]));
+                    }
+                } catch (e) {}
+            }
+
+            tick();
+            setInterval(tick, 2000);
+        })();
     </script>
     {{end}}
 

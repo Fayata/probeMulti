@@ -17,6 +17,7 @@ type TargetURL struct {
 	FirstUpTime     sql.NullTime
 	TotalProbeCount int64
 	TotalLatencySum int64
+	ProbeMode       string
 }
 
 type ProbeHistory struct {

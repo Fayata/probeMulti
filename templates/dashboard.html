@@ -58,11 +58,14 @@
         </select>
         <input type="hidden" name="range" id="chart_range_input" value="{{or $.ChartRange "1d"}}" />
         <div class="chart-range-group">
+            <button type="button" class="chart-range-btn{{if eq (or $.ChartRange "1d") "10s"}} active{{end}}" onclick="document.getElementById('chart_range_input').value='10s'; this.form.submit();">10s</button>
+            <button type="button" class="chart-range-btn{{if eq (or $.ChartRange "1d") "30s"}} active{{end}}" onclick="document.getElementById('chart_range_input').value='30s'; this.form.submit();">30s</button>
+            <button type="button" class="chart-range-btn{{if eq (or $.ChartRange "1d") "1min"}} active{{end}}" onclick="document.getElementById('chart_range_input').value='1min'; this.form.submit();">1min</button>
             <button type="button" class="chart-range-btn{{if eq (or $.ChartRange "1d") "1h"}} active{{end}}" onclick="document.getElementById('chart_range_input').value='1h'; this.form.submit();">1h</button>
             <button type="button" class="chart-range-btn{{if eq (or $.ChartRange "1d") "4h"}} active{{end}}" onclick="document.getElementById('chart_range_input').value='4h'; this.form.submit();">4h</button>
-            <button type="button" class="chart-range-btn{{if or (eq (or $.ChartRange "1d") "1d") (not $.ChartRange)}} active{{end}}" onclick="document.getElementById('chart_range_input').value='1d'; this.form.submit();">1d</button>
-            <button type="button" class="chart-range-btn{{if eq (or $.ChartRange "1d") "1w"}} active{{end}}" onclick="document.getElementById('chart_range_input').value='1w'; this.form.submit();">1w</button>
-            <button type="button" class="chart-range-btn{{if eq (or $.ChartRange "1d") "1m"}} active{{end}}" onclick="document.getElementById('chart_range_input').value='1m'; this.form.submit();">1m</button>
+            <button type="button" class="chart-range-btn{{if or (eq (or $.ChartRange "1d") "1d") (not $.ChartRange)}} active{{end}}" onclick="document.getElementById('chart_range_input').value='1d'; this.form.submit();">24h</button>
+            <button type="button" class="chart-range-btn{{if eq (or $.ChartRange "1d") "1w"}} active{{end}}" onclick="document.getElementById('chart_range_input').value='1w'; this.form.submit();">1W</button>
+            <button type="button" class="chart-range-btn{{if eq (or $.ChartRange "1d") "1m"}} active{{end}}" onclick="document.getElementById('chart_range_input').value='1m'; this.form.submit();">1M</button>
         </div>
         <button type="submit" class="btn">
             <svg class="icon" fill="currentColor" viewBox="0 0 24 24">
@@ -75,16 +78,16 @@
     <div class="chart-container">
         <canvas id="latencyChart"></canvas>
     </div>
+    <div style="margin-top:10px;color:rgba(255,255,255,0.65);font-size:12px;">
+        Tip: double-click pada chart untuk mengaktifkan / mematikan mode zoom & pan. Saat aktif, scroll/pinch untuk zoom dan drag untuk geser.
+    </div>
 </div>
 
 <script>
-    console.log('DEBUG RAW:', {{.JSONHistoryData}});
     const historyData = {{.JSONHistoryData}};
-    console.log('PARSED historyData:', historyData);
-    console.log('typeof:', typeof historyData);
-    if (historyData && historyData.length > 0) {
-        initChart(historyData);
-    }
+    const selectedUrlId = window.dashboardChartUrlId || {{.SelectedURLID}};
+    const chartRange = window.dashboardChartRange || "{{or .ChartRange "1d"}}";
+    initChart(historyData, selectedUrlId, chartRange);
 </script>
 
 {{end}}

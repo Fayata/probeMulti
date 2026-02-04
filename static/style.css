@@ -417,11 +417,22 @@ tr:hover {
     min-height: 300px;
 }
 
-.chart-range-group {display:flex;gap:2px;}
+.chart-range-group {display:flex;gap:2px;flex-wrap:wrap;}
+.chart-range-group a.chart-range-btn {text-decoration:none;display:inline-block;}
 .chart-range-btn {
     background:#171c2e;color:#eee;border:none;padding:6px 12px;margin-left:2px;border-radius:16px;opacity:.7;font-size:13px;cursor:pointer;
     transition:all .2s;}
 .chart-range-btn.active {background:#25c17e;color:#fff;opacity:1;font-weight:bold;box-shadow:0 2px 12px 0 #25c17e22}
+.chart-range-btn:hover {opacity:1;}
+
+/* ===== TABLE ROW NEW ANIMATION (URL Histories) ===== */
+@keyframes rowIn {
+    0% { background: rgba(37, 193, 126, 0.28); transform: translateY(-6px); }
+    100% { background: transparent; transform: translateY(0); }
+}
+.row-new {
+    animation: rowIn 900ms ease-out;
+}
 
 /* ===== EMPTY STATE ===== */
 .empty-state {

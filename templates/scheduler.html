@@ -8,20 +8,27 @@
 <div class="card">
     <h2 class="card-title">
         <svg class="icon" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+            <path
+                d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z" />
         </svg>
         Scheduler Settings
     </h2>
     <form action="/settings" method="POST" class="input-group">
         <select name="interval">
-            <option value="@every 1m" {{if eq .CurrentInterval "@every 1m"}}selected{{end}}>Every 1 Minutes (Testing)</option>
-            <option value="@every 5m" {{if eq .CurrentInterval "@every 5m"}}selected{{end}}>Every 5 Minutes</option>
-            <option value="@every 10m" {{if eq .CurrentInterval "@every 10m"}}selected{{end}}>Every 10 Minutes</option>
-            <option value="@every 30m" {{if eq .CurrentInterval "@every 30m"}}selected{{end}}>Every 30 Minutes</option>
+            <option value="@every 1s" {{if eq .CurrentInterval "@every 1s" }}selected{{end}}>Every 1 Second 
+            </option>
+            <option value="@every 10s" {{if eq .CurrentInterval "@every 10s" }}selected{{end}}>Every 10 Seconds</option>
+            <option value="@every 30s" {{if eq .CurrentInterval "@every 30s" }}selected{{end}}>Every 30 Seconds</option>
+            <option value="@every 1m" {{if eq .CurrentInterval "@every 1m" }}selected{{end}}>Every 1 Minute 
+            </option>
+            <option value="@every 5m" {{if eq .CurrentInterval "@every 5m" }}selected{{end}}>Every 5 Minutes</option>
+            <option value="@every 10m" {{if eq .CurrentInterval "@every 10m" }}selected{{end}}>Every 10 Minutes</option>
+            <option value="@every 30m" {{if eq .CurrentInterval "@every 30m" }}selected{{end}}>Every 30 Minutes</option>
         </select>
         <button type="submit" class="btn">
             <svg class="icon" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+                <path
+                    d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
             </svg>
             Save Settings
         </button>
@@ -32,47 +39,77 @@
 <div class="card">
     <h2 class="card-title">
         <svg class="icon" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+            <path
+                d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
         </svg>
         URL Histories
     </h2>
+    <!-- <div class="input-group" style="margin-bottom:16px;">
+        <span style="color:rgba(255,255,255,0.8);margin-right:8px;">Range:</span>
+        <div class="chart-range-group">
+            <a href="/scheduler?range=1s{{if .PageSize}}&size={{.PageSize}}{{end}}"
+                class="chart-range-btn{{if eq .ChartRange " 1s"}} active{{end}}">1s</a>
+            <a href="/scheduler?range=10s{{if .PageSize}}&size={{.PageSize}}{{end}}"
+                class="chart-range-btn{{if eq .ChartRange " 10s"}} active{{end}}">10s</a>
+            <a href="/scheduler?range=30s{{if .PageSize}}&size={{.PageSize}}{{end}}"
+                class="chart-range-btn{{if eq .ChartRange " 30s"}} active{{end}}">30s</a>
+            <a href="/scheduler?range=1min{{if .PageSize}}&size={{.PageSize}}{{end}}"
+                class="chart-range-btn{{if eq .ChartRange " 1min"}} active{{end}}">1min</a>
+            <a href="/scheduler?range=1h{{if .PageSize}}&size={{.PageSize}}{{end}}"
+                class="chart-range-btn{{if eq .ChartRange " 1h"}} active{{end}}">1h</a>
+            <a href="/scheduler?range=4h{{if .PageSize}}&size={{.PageSize}}{{end}}"
+                class="chart-range-btn{{if eq .ChartRange " 4h"}} active{{end}}">4h</a>
+            <a href="/scheduler?range=1d{{if .PageSize}}&size={{.PageSize}}{{end}}"
+                class="chart-range-btn{{if eq .ChartRange " 1d"}} active{{end}}">24h</a>
+            <a href="/scheduler?range=1w{{if .PageSize}}&size={{.PageSize}}{{end}}"
+                class="chart-range-btn{{if eq .ChartRange " 1w"}} active{{end}}">1W</a>
+            <a href="/scheduler?range=1m{{if .PageSize}}&size={{.PageSize}}{{end}}"
+                class="chart-range-btn{{if eq .ChartRange " 1m"}} active{{end}}">1M</a>
+            <a href="/scheduler{{if .PageSize}}?size={{.PageSize}}{{end}}"
+                class="chart-range-btn{{if not .ChartRange}} active{{end}}">All</a>
+        </div>
+    </div> -->
     <div class="table-wrapper">
         <table>
             <thead>
                 <tr>
                     <th>
                         <svg class="icon" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
+                            <path
+                                d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z" />
                         </svg>
                         <span>URL</span>
                     </th>
                     <th>
                         <svg class="icon" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M3 3v18h18V3H3zm16 16H5V5h14v14zM11 7h2v2h-2zm0 4h2v6h-2z"/>
+                            <path d="M3 3v18h18V3H3zm16 16H5V5h14v14zM11 7h2v2h-2zm0 4h2v6h-2z" />
                         </svg>
                         <span>Status</span>
                     </th>
                     <th>
                         <svg class="icon" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M20.38 8.57l-1.23 1.85a8 8 0 0 1-.22 7.58H5.07A8 8 0 0 1 15.58 6.85l1.85-1.23A10 10 0 0 0 3.35 19a2 2 0 0 0 1.72 1h13.85a2 2 0 0 0 1.74-1 10 10 0 0 0-.27-10.44zm-9.79 6.84a2 2 0 0 0 2.83 0l5.66-8.49-8.49 5.66a2 2 0 0 0 0 2.83z"/>
+                            <path
+                                d="M20.38 8.57l-1.23 1.85a8 8 0 0 1-.22 7.58H5.07A8 8 0 0 1 15.58 6.85l1.85-1.23A10 10 0 0 0 3.35 19a2 2 0 0 0 1.72 1h13.85a2 2 0 0 0 1.74-1 10 10 0 0 0-.27-10.44zm-9.79 6.84a2 2 0 0 0 2.83 0l5.66-8.49-8.49 5.66a2 2 0 0 0 0 2.83z" />
                         </svg>
                         <span>Response Time</span>
                     </th>
                     <th>
                         <svg class="icon" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+                            <path
+                                d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
                         </svg>
                         <span>Check Time</span>
                     </th>
                     <th>
                         <svg class="icon" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                            <path
+                                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
                         </svg>
                         <span>Description</span>
                     </th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="history_tbody">
                 {{range .HistoryData}}
                 <tr>
                     <td>
@@ -103,21 +140,26 @@
         </div>
         <div>
             {{if gt .PageNumber 1}}
-                <a class="btn" href="/scheduler?page={{subtract .PageNumber 1}}&size={{.PageSize}}">Previous</a>
+            <a class="btn"
+                href="/scheduler?page={{subtract .PageNumber 1}}&size={{.PageSize}}{{if .ChartRange}}&range={{.ChartRange}}{{end}}">Previous</a>
             {{end}}
             {{/* Ellipsis di depan */}}
             {{if and (gt (index .NavigatorPages 0) 1) }}<span style="margin:0 6px;color:#888">...</span>{{end}}
             {{range .NavigatorPages}}
-                {{if eq . $.PageNumber}}
-                    <span class="btn active" style="background:#25c17e;color:#fff;pointer-events:none;">{{.}}</span>
-                {{else}}
-                    <a class="btn" href="/scheduler?page={{.}}&size={{$.PageSize}}">{{.}}</a>
-                {{end}}
+            {{if eq . $.PageNumber}}
+            <span class="btn active" style="background:#25c17e;color:#fff;pointer-events:none;">{{.}}</span>
+            {{else}}
+            <a class="btn"
+                href="/scheduler?page={{.}}&size={{$.PageSize}}{{if $.ChartRange}}&range={{$.ChartRange}}{{end}}">{{.}}</a>
+            {{end}}
             {{end}}
             {{/* Ellipsis di belakang */}}
-            {{if and (gt .TotalPages 0) (lt (index .NavigatorPages (subtract (len .NavigatorPages) 1)) .TotalPages)}}<span style="margin:0 6px;color:#888">...</span>{{end}}
+            {{if and (gt .TotalPages 0) (lt (index .NavigatorPages (subtract (len .NavigatorPages) 1))
+            .TotalPages)}}<span style="margin:0 6px;color:#888">...</span>{{end}}
             {{if lt .PageNumber .TotalPages}}
-                <a class="btn" href="/scheduler?page={{add .PageNumber 1}}&size={{.PageSize}}" style="margin-left:8px;">Next</a>
+            <a class="btn"
+                href="/scheduler?page={{add .PageNumber 1}}&size={{.PageSize}}{{if .ChartRange}}&range={{.ChartRange}}{{end}}"
+                style="margin-left:8px;">Next</a>
             {{end}}
         </div>
     </div>
@@ -126,5 +168,82 @@
 {{end}}
 
 <style>
-.btn.active {background:#25c17e;color:#fff;font-weight:bold;pointer-events:none;opacity:1;}
+    .btn.active {
+        background: #25c17e;
+        color: #fff;
+        font-weight: bold;
+        pointer-events: none;
+        opacity: 1;
+    }
 </style>
+
+<script>
+(function () {
+    const tbody = document.getElementById('history_tbody');
+    if (!tbody) return;
+
+    const every = "{{.CurrentInterval}}";
+
+    function parseEveryMs(expr) {
+        const s = String(expr || '').trim();
+        const m = s.match(/^@every\s+(\d+)\s*([smh])$/i);
+        if (!m) return 3000;
+        const n = Number(m[1]);
+        const unit = String(m[2] || '').toLowerCase();
+        if (!n || n <= 0) return 3000;
+        const mult = unit === 's' ? 1000 : unit === 'm' ? 60_000 : 3_600_000;
+        return n * mult;
+    }
+
+    const everyMs = parseEveryMs(every);
+    const pollMs = Math.max(1000, Math.min(3000, everyMs));
+
+    function escapeHtml(s) {
+        return String(s ?? '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
+    }
+
+    function rowHtml(h) {
+        const d = new Date(h.Timestamp);
+        const ts = d.toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        // Since only successful probes are added to history, status is always 'Up'
+        return (
+            '<tr class="row-new">' +
+                '<td><a href="' + escapeHtml(h.URL) + '" class="url-link" target="_blank">' + escapeHtml(h.URL) + '</a></td>' +
+                '<td><span class="status-badge status-up">Up</span></td>' +
+                '<td class="latency">' + (h.LatencyMs || 0) + ' ms</td>' +
+                '<td class="date-time">' + escapeHtml(ts) + '</td>' +
+                '<td><span style="color:#4caf50;">Succeed</span></td>' +
+            '</tr>'
+        );
+    }
+
+    async function tick() {
+        try {
+            // Fetch the latest 30 history items
+            const res = await fetch('/api/scheduler/history?limit=30');
+            if (!res.ok) return;
+            const data = await res.json();
+            if (!Array.isArray(data)) return;
+
+            // Clear the table and redraw
+            tbody.innerHTML = '';
+            let allRowsHtml = '';
+            for (let i = 0; i < data.length; i++) {
+                allRowsHtml += rowHtml(data[i]);
+            }
+            tbody.innerHTML = allRowsHtml;
+
+        } catch (e) {
+            console.error("Failed to fetch history:", e);
+        }
+    }
+
+    tick();
+    setInterval(tick, pollMs);
+})();
+</script>

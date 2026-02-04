@@ -27,7 +27,16 @@ func CreateJob(store *database.Store) func() {
 
 		// Jalankan probe untuk setiap URL
 		for _, u := range urls {
-			result := probe.DoProbe(u.URL)
+			var result probe.ProbeResult
+			// Mode probe: "http" (default) atau "tcp" (opsi mirip ICMP)
+			switch u.ProbeMode {
+			case "tcp":
+				result = probe.DoTCPPing(u.URL)
+			case "icmp":
+				result = probe.DoICMPProbe(u.URL)
+			default:
+				result = probe.DoHTTPProbe(u.URL)
+			}
 
 			// --- LOGIKA UPTIME ---
 			var newFirstUpTime sql.NullTime = u.FirstUpTime
@@ -61,12 +70,12 @@ func CreateJob(store *database.Store) func() {
 
 // StartScheduler starts the cron job
 func StartScheduler(interval string, store *database.Store) (*cron.Cron, cron.EntryID) {
-	log.Printf("Starting scheduler (every %s)...", interval)
 	c := cron.New()
-
-	// Use the 'interval' from the arguments
-	id, _ := c.AddFunc(interval, CreateJob(store))
+	entryID, err := c.AddFunc(interval, CreateJob(store))
+	if err != nil {
+		log.Fatalf("Failed to add cron job: %v", err)
+	}
 	c.Start()
-
-	return c, id
+	log.Printf("Scheduler started with interval: %s\n", interval)
+	return c, entryID
 }
