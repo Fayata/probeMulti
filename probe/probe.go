@@ -67,7 +67,7 @@ func DoTCPPing(rawURL string) ProbeResult {
 
 	if err != nil {
 		return ProbeResult{
-			StatusCode: 0, // Connection failed
+			StatusCode: 0,
 			LatencyMs:  milliseconds,
 			NetworkErr: true,
 		}
@@ -75,7 +75,7 @@ func DoTCPPing(rawURL string) ProbeResult {
 	conn.Close()
 
 	return ProbeResult{
-		StatusCode: 200, // Connection successful
+		StatusCode: 200, 
 		LatencyMs:  milliseconds,
 		NetworkErr: false,
 	}

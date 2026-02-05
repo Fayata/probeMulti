@@ -18,6 +18,7 @@ type TargetURL struct {
 	TotalProbeCount int64
 	TotalLatencySum int64
 	ProbeMode       string
+	ThreadCount     int
 }
 
 type ProbeHistory struct {
@@ -25,28 +26,32 @@ type ProbeHistory struct {
 	URL       string
 	LatencyMs int64
 	Timestamp time.Time
+	StatusCode int
+	Status    string
+	Description string
 }
 
 type PageData struct {
-	Page             string
-	URLs             []TargetURL
-	CurrentInterval  string
-	GlobalAvgLatency int64
-	GlobalUptimePct  int
-	LastCheckedTime  time.Time
-	HistoryData      []ProbeHistory
-	SelectedURLID    int
-	PageNumber       int
-	PageSize         int
-	TotalItems       int64
-	TotalPages       int
-	HasPrev          bool
-	HasNext          bool
-	PrevPage         int
-	NextPage         int
-	ChartRange       string
-	NavigatorPages   []int
-	JSONHistoryData  template.JS
+	Page                 string
+	URLs                 []TargetURL
+	CurrentInterval      string
+	SchedulerThreadCount int
+	GlobalAvgLatency     int64
+	GlobalUptimePct      int
+	LastCheckedTime      time.Time
+	HistoryData          []ProbeHistory
+	SelectedURLID        int
+	PageNumber           int
+	PageSize             int
+	TotalItems           int64
+	TotalPages           int
+	HasPrev              bool
+	HasNext              bool
+	PrevPage             int
+	NextPage             int
+	ChartRange           string
+	NavigatorPages       []int
+	JSONHistoryData      template.JS
 }
 
 // === FUNGSI HELPER UNTUK TEMPLATE ===

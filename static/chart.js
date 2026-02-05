@@ -11,17 +11,15 @@ function getRefreshMs(range) {
 
 function getTimeScaleOptions(range) {
     const r = range || '1d';
-    // 24h = jam 02.00, 04.00, ...; 1W = tanggal; per detik/30s/1min = detik
     const configs = {
-        // Untuk range sangat pendek, pakai millisecond agar label/titik terlihat lebih "hidup"
         '1s':   { unit: 'millisecond', stepSize: 200,  maxTicks: 8 },
         '10s':  { unit: 'second', stepSize: 2,  maxTicks: 8 },
         '30s':  { unit: 'second', stepSize: 5,  maxTicks: 8 },
         '1min': { unit: 'second', stepSize: 10, maxTicks: 8 },
         '1h':   { unit: 'minute', stepSize: 5,  maxTicks: 10 },
         '4h':   { unit: 'minute', stepSize: 15, maxTicks: 10 },
-        '1d':   { unit: 'hour',   stepSize: 2,  maxTicks: 12 },  // 24h: jam (02.00, 04.00, ...)
-        '1w':   { unit: 'day',    stepSize: 1,  maxTicks: 10 },  // 1W: tanggal (29 Jan, 30 Jan, 4 Feb)
+        '1d':   { unit: 'hour',   stepSize: 2,  maxTicks: 12 }, 
+        '1w':   { unit: 'day',    stepSize: 1,  maxTicks: 10 },  
         '1m':   { unit: 'day',    stepSize: 2,  maxTicks: 15 }
     };
     const c = configs[r] || configs['1d'];
@@ -61,21 +59,17 @@ function formatDateMonthHour(ms) {
 
 function getBucketMs(range) {
     const r = range || '1d';
-    // Sesuai request:
-    // - 24h: rata-rata per 2 jam
-    // - jam-an: rata-rata per 5 menit
-    // - menit-an: JANGAN terlalu besar (biar zoom/pan tetap detail)
     const map = {
         '1m': 6 * 60 * 60 * 1000,   // 30 hari -> 6 jam
         '1w': 2 * 60 * 60 * 1000,   // 7 hari -> 2 jam
         '1d': 2 * 60 * 60 * 1000,   // 24 jam -> 2 jam
         '4h': 5 * 60 * 1000,        // 4 jam -> 5 menit
         '1h': 5 * 60 * 1000,        // 1 jam -> 5 menit
-        // Range kecil: pakai 1 detik (atau sesuai sampling scheduler) supaya saat zoom tidak "lompat"
+        
         '1min': 1 * 1000,
         '30s': 1 * 1000,
-        '10s': 1 * 1000,            // 10 detik -> 1 detik
-        '1s': 1 * 1000              // 1 detik -> 1 detik
+        '10s': 1 * 1000,            
+        '1s': 1 * 1000             
     };
     return map[r] != null ? map[r] : 2 * 60 * 60 * 1000;
 }
@@ -100,7 +94,6 @@ function bucketAverage(points, bucketMs) {
             i += 1;
         }
         if (count > 0) {
-            // x pakai waktu terakhir di bucket agar garis maju mengikuti waktu
             out.push({ x: lastX, y: Math.round(sum / count) });
         }
     }
@@ -134,12 +127,9 @@ function getDecimationSamples(range) {
 function pickUniformColor(values) {
     if (!values || values.length < 2) return { line: '#25c17e', fillTop: 'rgba(37, 193, 126, 0.2)', fillBottom: 'rgba(37, 193, 126, 0)' };
 
-    const first = values[0]; // paling kiri
-    const last = values[values.length - 1]; // saat ini (paling kanan)
+    const first = values[0]; 
+    const last = values[values.length - 1]; 
 
-    // Aturan user (terbaru):
-    // - Jika garis kiri lebih tinggi dari garis saat ini => hijau
-    // - Selain itu => merah
     const useGreen = first > last;
     if (!useGreen) {
         return { line: '#c62828', fillTop: 'rgba(198, 40, 40, 0.22)', fillBottom: 'rgba(198, 40, 40, 0)' };
@@ -156,7 +146,6 @@ function getYRangePadding(values) {
         if (values[i] > max) max = values[i];
     }
     if (min === max) {
-        // Kalau semua sama, bikin padding supaya garis/titik tetap terlihat
         const pad = Math.max(5, Math.round(min * 0.1));
         return { min: Math.max(0, min - pad), max: max + pad };
     }
@@ -255,14 +244,11 @@ function initChart(historyData, urlId, chartRange) {
             interaction: { intersect: false, mode: 'index' },
             plugins: {
                 legend: { display: false },
-                // Supaya garis tidak "kusut" saat titik sangat banyak: downsample dengan LTTB
-                // (mirip chart trading: tetap mengikuti bentuk, tapi tidak noisy)
                 decimation: {
                     enabled: true,
                     algorithm: 'lttb',
                     samples: decimationSamples
                 },
-                // Pan/zoom seperti TradingView (drag untuk geser, scroll/pinch untuk zoom)
                 zoom: {
                     pan: {
                         enabled: function() { return chartZoomActive; },
@@ -277,7 +263,6 @@ function initChart(historyData, urlId, chartRange) {
                         pinch: {
                             enabled: function() { return chartZoomActive; }
                         },
-                        // Zoom hanya di sumbu waktu (X); sumbu ms (Y) tetap stabil
                         mode: 'x',
                         onZoom: function({ chart }) {
                             try {

@@ -107,12 +107,14 @@
                 const avg = (u.TotalProbeCount && u.TotalProbeCount > 0) ? Math.round(u.TotalLatencySum / u.TotalProbeCount) + ' ms' : 'N/A';
                 const lastChecked = formatTime(u.LastChecked);
                 const mode = u.ProbeMode || 'http';
+                const threadCount = u.ThreadCount || 1;
 
                 return (
                     '<tr>' +
                         '<td>' + statusBadge + '</td>' +
                         '<td><a href="' + escapeHtml(u.URL) + '" class="url-link" target="_blank">' + escapeHtml(u.URL) + '</a></td>' +
                         '<td><span class="status-code">' + escapeHtml(mode) + '</span></td>' +
+                        '<td><span class="status-code">' + threadCount + '</span></td>' +
                         '<td><span class="status-code">' + (u.LastStatus ?? 0) + '</span></td>' +
                         '<td class="latency">' + (u.LastLatencyMs ?? 0) + ' ms</td>' +
                         '<td class="latency">' + escapeHtml(avg) + '</td>' +
@@ -139,7 +141,7 @@
 
                     tbody.innerHTML = '';
                     if (data.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No URLs available. Please add one.</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="10" class="empty-state">No URLs available. Please add one.</td></tr>';
                         return;
                     }
                     for (let i = 0; i < data.length; i++) {

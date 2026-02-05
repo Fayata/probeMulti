@@ -39,8 +39,13 @@ func NewStore(dbPath string) *Store {
 	// Add probe_mode column if it doesn't exist
 	_, err = db.Exec("ALTER TABLE urls ADD COLUMN probe_mode TEXT NOT NULL DEFAULT 'http'")
 	if err != nil {
-		// Better to check for specific error, but for now we assume it might be "duplicate column"
 		log.Printf("Could not add 'probe_mode' column, it might already exist: %v", err)
+	}
+
+	// Add thread_count column if it doesn't exist
+	_, err = db.Exec("ALTER TABLE urls ADD COLUMN thread_count INTEGER NOT NULL DEFAULT 1")
+	if err != nil {
+		log.Printf("Could not add 'thread_count' column, it might already exist: %v", err)
 	}
 
 	// --- TABEL SETTINGS ---
@@ -59,6 +64,12 @@ func NewStore(dbPath string) *Store {
 		log.Fatalf("Gagal set default interval: %v", err)
 	}
 
+	// Isi nilai default untuk thread_count scheduler (jika belum ada)
+	_, err = db.Exec("INSERT OR IGNORE INTO settings (key, value) VALUES ('scheduler_thread_count', '1')")
+	if err != nil {
+		log.Fatalf("Gagal set default scheduler thread count: %v", err)
+	}
+
 	// --- TABEL PROBE HISTORY ---
 	createHistoryTableSQL := `
 	CREATE TABLE IF NOT EXISTS probe_history (
@@ -73,10 +84,34 @@ func NewStore(dbPath string) *Store {
 		log.Fatalf("Gagal membuat tabel probe_history: %v", err)
 	}
 
+	// Add status_code column
+	_, err = db.Exec("ALTER TABLE probe_history ADD COLUMN status_code INTEGER")
+	if err != nil {
+		log.Printf("Could not add 'status_code' column, it might already exist: %v", err)
+	}
+
+	// Add status column
+	_, err = db.Exec("ALTER TABLE probe_history ADD COLUMN status TEXT")
+	if err != nil {
+		log.Printf("Could not add 'status' column, it might already exist: %v", err)
+	}
+
+	// Add description column
+	_, err = db.Exec("ALTER TABLE probe_history ADD COLUMN description TEXT")
+	if err != nil {
+		log.Printf("Could not add 'description' column, it might already exist: %v", err)
+	}
+
 	// Inisialisasi kolom probe_mode untuk data yang sudah ada
 	_, err = db.Exec("UPDATE urls SET probe_mode = 'http' WHERE probe_mode IS NULL")
 	if err != nil {
 		log.Fatalf("Gagal mengupdate probe_mode untuk data yang ada: %v", err)
+	}
+
+	// Inisialisasi kolom thread_count untuk data yang sudah ada
+	_, err = db.Exec("UPDATE urls SET thread_count = 1 WHERE thread_count IS NULL OR thread_count = 0")
+	if err != nil {
+		log.Fatalf("Gagal mengupdate thread_count untuk data yang ada: %v", err)
 	}
 
 	return &Store{Db: db}
@@ -94,9 +129,29 @@ func (s *Store) SetScheduleInterval(interval string) error {
 	return err
 }
 
+func (s *Store) GetSchedulerThreadCount() (int, error) {
+	var count int
+	err := s.Db.QueryRow("SELECT value FROM settings WHERE key = 'scheduler_thread_count'").Scan(&count)
+	if err != nil {
+		return 1, err
+	}
+	if count < 1 {
+		count = 1
+	}
+	return count, nil
+}
+
+func (s *Store) SetSchedulerThreadCount(count int) error {
+	if count < 1 {
+		count = 1
+	}
+	_, err := s.Db.Exec("UPDATE settings SET value = ? WHERE key = 'scheduler_thread_count'", count)
+	return err
+}
+
 // --- FUNGSI URLS ---
 func (s *Store) GetAllURLs() ([]models.TargetURL, error) {
-	rows, err := s.Db.Query("SELECT id, url, probe_mode, last_status, last_latency_ms, last_checked, first_up_time, total_probe_count, total_latency_sum FROM urls ORDER BY id DESC")
+	rows, err := s.Db.Query("SELECT id, url, probe_mode, thread_count, last_status, last_latency_ms, last_checked, first_up_time, total_probe_count, total_latency_sum FROM urls ORDER BY id DESC")
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +161,7 @@ func (s *Store) GetAllURLs() ([]models.TargetURL, error) {
 	for rows.Next() {
 		var u models.TargetURL
 		var lastChecked sql.NullTime
-		if err := rows.Scan(&u.ID, &u.URL, &u.ProbeMode, &u.LastStatus, &u.LastLatencyMs, &lastChecked, &u.FirstUpTime, &u.TotalProbeCount, &u.TotalLatencySum); err != nil {
+		if err := rows.Scan(&u.ID, &u.URL, &u.ProbeMode, &u.ThreadCount, &u.LastStatus, &u.LastLatencyMs, &lastChecked, &u.FirstUpTime, &u.TotalProbeCount, &u.TotalLatencySum); err != nil {
 			return nil, err
 		}
 		if lastChecked.Valid {
@@ -118,8 +173,11 @@ func (s *Store) GetAllURLs() ([]models.TargetURL, error) {
 	return urls, nil
 }
 
-func (s *Store) AddURLWithMode(url string, mode string) error {
-	_, err := s.Db.Exec("INSERT INTO urls (url, probe_mode, last_checked) VALUES (?, ?, ?)", url, mode, time.Now())
+func (s *Store) AddURLWithMode(url string, mode string, threadCount int) error {
+	if threadCount < 1 {
+		threadCount = 1
+	}
+	_, err := s.Db.Exec("INSERT INTO urls (url, probe_mode, thread_count, last_checked) VALUES (?, ?, ?, ?)", url, mode, threadCount, time.Now())
 	return err
 }
 
@@ -158,9 +216,9 @@ func (s *Store) UpdateProbeNetworkError(id int, latency int64, firstUpTime sql.N
 // --- FUNGSI PROBE HISTORY (Diperbarui) ---
 
 // AddProbeHistory menyimpan satu log probe
-func (s *Store) AddProbeHistory(urlID int, latencyMs int64) error {
-	_, err := s.Db.Exec("INSERT INTO probe_history (url_id, latency_ms, timestamp) VALUES (?, ?, ?)",
-		urlID, latencyMs, time.Now())
+func (s *Store) AddProbeHistory(urlID int, latencyMs int64, statusCode int, status string, description string) error {
+	_, err := s.Db.Exec("INSERT INTO probe_history (url_id, latency_ms, timestamp, status_code, status, description) VALUES (?, ?, ?, ?, ?, ?)",
+		urlID, latencyMs, time.Now(), statusCode, status, description)
 	// Juga membersihkan history lama agar DB tidak penuh
 	// Simpan sampai 1.000.000 baris terbaru, sisanya dihapus
 	_, _ = s.Db.Exec("DELETE FROM probe_history WHERE id NOT IN (SELECT id FROM probe_history ORDER BY timestamp DESC LIMIT 1000000)")
@@ -177,7 +235,7 @@ func (s *Store) DeleteProbeHistory(urlID int) error {
 func (s *Store) GetProbeHistory(urlID int, limit int) ([]models.ProbeHistory, error) {
 	// Diperbarui: Menggunakan JOIN untuk mengambil urls.url
 	rows, err := s.Db.Query(`
-		SELECT h.url_id, u.url, h.latency_ms, h.timestamp 
+		SELECT h.url_id, u.url, h.latency_ms, h.timestamp, h.status_code, h.status, h.description
 		FROM probe_history h
 		JOIN urls u ON h.url_id = u.id
 		WHERE h.url_id = ? 
@@ -191,7 +249,7 @@ func (s *Store) GetProbeHistory(urlID int, limit int) ([]models.ProbeHistory, er
 	var history []models.ProbeHistory
 	for rows.Next() {
 		var h models.ProbeHistory
-		if err := rows.Scan(&h.URLID, &h.URL, &h.LatencyMs, &h.Timestamp); err != nil {
+		if err := rows.Scan(&h.URLID, &h.URL, &h.LatencyMs, &h.Timestamp, &h.StatusCode, &h.Status, &h.Description); err != nil {
 			return nil, err
 		}
 		history = append(history, h)
@@ -202,7 +260,7 @@ func (s *Store) GetProbeHistory(urlID int, limit int) ([]models.ProbeHistory, er
 // GetAllProbeHistory mengambil N probe terakhir dari SEMUA URL (untuk Scheduler)
 func (s *Store) GetAllProbeHistory(limit int) ([]models.ProbeHistory, error) {
 	rows, err := s.Db.Query(`
-        SELECT h.url_id, u.url, h.latency_ms, h.timestamp 
+        SELECT h.url_id, u.url, h.latency_ms, h.timestamp, h.status_code, h.status, h.description
         FROM probe_history h
         JOIN urls u ON h.url_id = u.id
         ORDER BY h.timestamp DESC 
@@ -215,7 +273,7 @@ func (s *Store) GetAllProbeHistory(limit int) ([]models.ProbeHistory, error) {
 	var history []models.ProbeHistory
 	for rows.Next() {
 		var h models.ProbeHistory
-		if err := rows.Scan(&h.URLID, &h.URL, &h.LatencyMs, &h.Timestamp); err != nil {
+		if err := rows.Scan(&h.URLID, &h.URL, &h.LatencyMs, &h.Timestamp, &h.StatusCode, &h.Status, &h.Description); err != nil {
 			return nil, err
 		}
 		history = append(history, h)
@@ -226,7 +284,7 @@ func (s *Store) GetAllProbeHistory(limit int) ([]models.ProbeHistory, error) {
 // GetAllProbeHistoryPaged mengambil probe_history dengan limit dan offset (untuk pagination)
 func (s *Store) GetAllProbeHistoryPaged(limit int, offset int) ([]models.ProbeHistory, error) {
 	rows, err := s.Db.Query(`
-        SELECT h.url_id, u.url, h.latency_ms, h.timestamp
+        SELECT h.url_id, u.url, h.latency_ms, h.timestamp, h.status_code, h.status, h.description
         FROM probe_history h
         JOIN urls u ON h.url_id = u.id
         ORDER BY h.timestamp DESC
@@ -239,7 +297,7 @@ func (s *Store) GetAllProbeHistoryPaged(limit int, offset int) ([]models.ProbeHi
 	var history []models.ProbeHistory
 	for rows.Next() {
 		var h models.ProbeHistory
-		if err := rows.Scan(&h.URLID, &h.URL, &h.LatencyMs, &h.Timestamp); err != nil {
+		if err := rows.Scan(&h.URLID, &h.URL, &h.LatencyMs, &h.Timestamp, &h.StatusCode, &h.Status, &h.Description); err != nil {
 			return nil, err
 		}
 		history = append(history, h)
@@ -264,7 +322,7 @@ func (s *Store) CountProbeHistoryByRange(since time.Time) (int64, error) {
 // GetAllProbeHistoryByRangePaged mengambil probe_history sejak waktu tertentu (semua URL), paged
 func (s *Store) GetAllProbeHistoryByRangePaged(since time.Time, limit int, offset int) ([]models.ProbeHistory, error) {
 	rows, err := s.Db.Query(`
-        SELECT h.url_id, u.url, h.latency_ms, h.timestamp
+        SELECT h.url_id, u.url, h.latency_ms, h.timestamp, h.status_code, h.status, h.description
         FROM probe_history h
         JOIN urls u ON h.url_id = u.id
         WHERE h.timestamp >= ?
@@ -278,7 +336,7 @@ func (s *Store) GetAllProbeHistoryByRangePaged(since time.Time, limit int, offse
 	var history []models.ProbeHistory
 	for rows.Next() {
 		var h models.ProbeHistory
-		if err := rows.Scan(&h.URLID, &h.URL, &h.LatencyMs, &h.Timestamp); err != nil {
+		if err := rows.Scan(&h.URLID, &h.URL, &h.LatencyMs, &h.Timestamp, &h.StatusCode, &h.Status, &h.Description); err != nil {
 			return nil, err
 		}
 		history = append(history, h)
@@ -289,7 +347,7 @@ func (s *Store) GetAllProbeHistoryByRangePaged(since time.Time, limit int, offse
 // GetProbeHistoryByRange mengambil probe untuk SATU URL dalam interval waktu tertentu (ASC)
 func (s *Store) GetProbeHistoryByRange(urlID int, since time.Time) ([]models.ProbeHistory, error) {
 	rows, err := s.Db.Query(`
-		SELECT h.url_id, u.url, h.latency_ms, h.timestamp 
+		SELECT h.url_id, u.url, h.latency_ms, h.timestamp, h.status_code, h.status, h.description
 		FROM probe_history h
 		JOIN urls u ON h.url_id = u.id
 		WHERE h.url_id = ? AND h.timestamp >= ?
@@ -302,7 +360,7 @@ func (s *Store) GetProbeHistoryByRange(urlID int, since time.Time) ([]models.Pro
 	var history []models.ProbeHistory
 	for rows.Next() {
 		var h models.ProbeHistory
-		if err := rows.Scan(&h.URLID, &h.URL, &h.LatencyMs, &h.Timestamp); err != nil {
+		if err := rows.Scan(&h.URLID, &h.URL, &h.LatencyMs, &h.Timestamp, &h.StatusCode, &h.Status, &h.Description); err != nil {
 			return nil, err
 		}
 		history = append(history, h)

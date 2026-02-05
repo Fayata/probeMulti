@@ -95,6 +95,7 @@ func (h *Handlers) URLsAPI(w http.ResponseWriter, r *http.Request) {
 		ID              int       `json:"ID"`
 		URL             string    `json:"URL"`
 		ProbeMode       string    `json:"ProbeMode"`
+		ThreadCount     int       `json:"ThreadCount"`
 		LastStatus      int       `json:"LastStatus"`
 		LastLatencyMs   int64     `json:"LastLatencyMs"`
 		LastChecked     time.Time `json:"LastChecked"`
@@ -111,6 +112,7 @@ func (h *Handlers) URLsAPI(w http.ResponseWriter, r *http.Request) {
 			ID:              u.ID,
 			URL:             u.URL,
 			ProbeMode:       u.ProbeMode,
+			ThreadCount:     u.ThreadCount,
 			LastStatus:      u.LastStatus,
 			LastLatencyMs:   u.LastLatencyMs,
 			LastChecked:     u.LastChecked,
@@ -273,6 +275,13 @@ func (h *Handlers) SchedulerPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Ambil thread count scheduler
+	schedulerThreadCount, err := h.App.Store.GetSchedulerThreadCount()
+	if err != nil {
+		log.Printf("Gagal mengambil scheduler thread count: %v", err)
+		schedulerThreadCount = 1
+	}
+
 	// Ambil semua URL untuk last checked time
 	urls, _ := h.App.Store.GetAllURLs()
 
@@ -353,16 +362,17 @@ func (h *Handlers) SchedulerPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := models.PageData{
-		Page:            "scheduler",
-		CurrentInterval: interval,
-		LastCheckedTime:  getLatestProbeTime(urls),
-		HistoryData:      historyData,
-		PageNumber:       pageNum,
-		PageSize:         pageSize,
-		TotalItems:       totalItems,
-		TotalPages:       totalPages,
-		NavigatorPages:   pages,
-		ChartRange:       qrange,
+		Page:                 "scheduler",
+		CurrentInterval:      interval,
+		SchedulerThreadCount: schedulerThreadCount,
+		LastCheckedTime:      getLatestProbeTime(urls),
+		HistoryData:          historyData,
+		PageNumber:           pageNum,
+		PageSize:             pageSize,
+		TotalItems:           totalItems,
+		TotalPages:           totalPages,
+		NavigatorPages:       pages,
+		ChartRange:           qrange,
 	}
 
 	// Render template SCHEDULER
@@ -395,11 +405,20 @@ func (h *Handlers) AddURL(w http.ResponseWriter, r *http.Request) {
 		mode = "http"
 	}
 
+	// Parse thread count
+	threadCountStr := r.FormValue("thread_count")
+	threadCount := 1
+	if threadCountStr != "" {
+		if tc, err := strconv.Atoi(threadCountStr); err == nil && tc > 0 {
+			threadCount = tc
+		}
+	}
+
 	if mode == "http" && !((strings.HasPrefix(url, "http://")) || (strings.HasPrefix(url, "https://"))) {
 		url = "https://" + url
 	}
 
-	err := h.App.Store.AddURLWithMode(url, mode)
+	err := h.App.Store.AddURLWithMode(url, mode, threadCount)
 	if err != nil {
 		log.Printf("Gagal menambah URL: %v", err)
 	}
@@ -446,6 +465,16 @@ func (h *Handlers) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/scheduler", http.StatusSeeOther)
 		return
 	}
+
+	// Parse scheduler thread count
+	schedulerThreadCountStr := r.FormValue("scheduler_thread_count")
+	schedulerThreadCount := 1
+	if schedulerThreadCountStr != "" {
+		if tc, err := strconv.Atoi(schedulerThreadCountStr); err == nil && tc > 0 {
+			schedulerThreadCount = tc
+		}
+	}
+
 	err := h.App.Store.SetScheduleInterval(interval)
 	if err != nil {
 		log.Println("Failed to save interval:", err)
@@ -453,8 +482,13 @@ func (h *Handlers) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = h.App.Store.SetSchedulerThreadCount(schedulerThreadCount)
+	if err != nil {
+		log.Println("Failed to save scheduler thread count:", err)
+	}
+
 	// Restart Cron Job
-	log.Printf("Changing scheduler interval to: %s", interval)
+	log.Printf("Changing scheduler interval to: %s with %d threads", interval, schedulerThreadCount)
 	h.App.Scheduler.Remove(h.App.JobID)
 	newID, err := h.App.Scheduler.AddFunc(interval, scheduler.CreateJob(h.App.Store))
 	if err != nil {
