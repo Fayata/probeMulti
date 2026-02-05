@@ -1,10 +1,13 @@
 ### Dashboard
+
 Dashboard menampilkan statistik uptime, jumlah URL aktif, rata-rata response time, dan grafik performa 30 hari terakhir.
 
 ### Target URL Management
+
 Kelola URL yang ingin dimonitor dengan mudah - tambah, hapus, dan lihat detail performa setiap URL.
 
 ### Scheduler Configuration
+
 Atur interval pengecekan otomatis dari 1 menit hingga 30 menit sesuai kebutuhan.
 
 ## ✨ Features
@@ -32,20 +35,24 @@ Atur interval pengecekan otomatis dari 1 menit hingga 30 menit sesuai kebutuhan.
 Sebelum menjalankan aplikasi, pastikan sistem Anda sudah terinstall:
 
 ### 1. **Go Programming Language**
+
 - **Minimum Version**: Go 1.20 atau lebih tinggi
 - **Download**: https://golang.org/dl/
 
 **Cara Install:**
 
 #### Windows:
+
 1. Download installer `.msi` dari website Go
 2. Jalankan installer dan ikuti instruksi
 3. Verifikasi instalasi:
+
 ```cmd
 go version
 ```
 
 #### Linux (Ubuntu/Debian):
+
 ```bash
 sudo apt update
 sudo apt install golang-go
@@ -59,6 +66,7 @@ go version
 ```
 
 #### macOS:
+
 ```bash
 # Menggunakan Homebrew:
 brew install go
@@ -68,9 +76,11 @@ go version
 ```
 
 ### 2. **Git** (Untuk clone repository)
+
 - **Download**: https://git-scm.com/downloads
 
 Verifikasi instalasi:
+
 ```bash
 git --version
 ```
@@ -78,20 +88,24 @@ git --version
 ### 3. **GCC Compiler** (Diperlukan untuk SQLite driver)
 
 #### Windows:
+
 - Download **MinGW-w64**: https://sourceforge.net/projects/mingw-w64/
 - Atau install **TDM-GCC**: https://jmeubank.github.io/tdm-gcc/
 
 #### Linux:
+
 ```bash
 sudo apt install build-essential
 ```
 
 #### macOS:
+
 ```bash
 xcode-select --install
 ```
 
 Verifikasi:
+
 ```bash
 gcc --version
 ```
@@ -101,8 +115,8 @@ gcc --version
 ### Step 1: Clone Repository
 
 ```bash
-git clone https://github.com/fayata/fprobe.git
-cd fprobe
+git clone https://github.com/fayata/probeMulti.git
+cd probeMulti
 ```
 
 ### Step 2: Install Dependencies
@@ -112,6 +126,7 @@ go mod download
 ```
 
 Dependencies yang akan diinstall:
+
 - `github.com/gorilla/mux` - HTTP router
 - `github.com/mattn/go-sqlite3` - SQLite driver
 - `github.com/robfig/cron/v3` - Task scheduler
@@ -119,6 +134,7 @@ Dependencies yang akan diinstall:
 ### Step 3: Persiapkan Static Files
 
 Pastikan struktur folder sebagai berikut:
+
 ```
 id-probe-status/
 ├── database/
@@ -155,6 +171,7 @@ go build -o fprobe
 ```
 
 Atau untuk development (tanpa build):
+
 ```bash
 go run main.go
 ```
@@ -163,13 +180,14 @@ go run main.go
 
 ```bash
 # Jika sudah build:
-./fprobe
+./probeMulti
 
 # Atau langsung run:
 go run main.go
 ```
 
 Output yang diharapkan:
+
 ```
 2025/10/29 13:38:26 Database terhubung dan tabel siap.
 2025/10/29 13:38:26 Templates yang dimuat:
@@ -184,6 +202,7 @@ Output yang diharapkan:
 ### Step 6: Access Application
 
 Buka browser dan akses:
+
 ```
 http://localhost:8080
 ```
@@ -191,19 +210,22 @@ http://localhost:8080
 ## 📖 Usage Guide
 
 ### 1. **Dashboard** (`/`)
+
 - Lihat statistik real-time: Total Uptime, Active URLs, Average Response Time
 - Pilih URL dari dropdown untuk melihat grafik performa 30 hari
 - Grafik menampilkan response time dalam milliseconds
 
 ### 2. **Target URL** (`/urls`)
+
 - **Tambah URL Baru**: Masukkan domain (contoh: `google.com` atau `https://google.com`)
-- **Monitor Status**: 
+- **Monitor Status**:
   - ✅ **Up** (hijau) = Website online
   - ❌ **Down** (merah) = Website offline
 - **View Details**: Status code, latency (last & average), uptime, last checked time
 - **Delete URL**: Klik tombol "Hapus" untuk menghapus monitoring
 
 ### 3. **Scheduler** (`/scheduler`)
+
 - **Atur Interval**: Pilih seberapa sering pengecekan dilakukan
   - `1 Menit` - Untuk testing/development
   - `5 Menit` - Untuk monitoring intensif
@@ -216,16 +238,18 @@ http://localhost:8080
 ### Ubah Port Default
 
 Edit file `main.go`:
+
 ```go
 port := os.Getenv("PORT")
 if port == "" {
-    port = "3000"  // Ubah dari 8080 ke port lain
+    port = "8080"
 }
 ```
 
 ### Ubah Database Location
 
 Edit file `main.go`:
+
 ```go
 store := database.NewStore("custom_path/probe.db")
 ```
@@ -233,6 +257,7 @@ store := database.NewStore("custom_path/probe.db")
 ### Ubah Scheduler Default
 
 Edit file `database/database.go`:
+
 ```go
 _, err = db.Exec("INSERT OR IGNORE INTO settings (key, value) VALUES ('schedule_interval', '@every 5m')")
 ```
@@ -277,17 +302,21 @@ id-probe-status/
 ## 🐛 Troubleshooting
 
 ### Error: "gcc: command not found"
+
 **Problem**: SQLite driver memerlukan GCC untuk compile.
 
 **Solution**:
+
 - **Windows**: Install MinGW atau TDM-GCC
 - **Linux**: `sudo apt install build-essential`
 - **macOS**: `xcode-select --install`
 
 ### Error: "template not found"
+
 **Problem**: Template file tidak ditemukan.
 
 **Solution**:
+
 ```bash
 # Pastikan struktur folder benar:
 ls templates/
@@ -295,9 +324,11 @@ ls templates/
 ```
 
 ### Error: "address already in use"
+
 **Problem**: Port 8080 sudah digunakan aplikasi lain.
 
 **Solution**:
+
 ```bash
 # Windows: Cari process yang pakai port 8080
 netstat -ano | findstr :8080
@@ -310,7 +341,9 @@ lsof -ti:8080 | xargs kill -9
 ```
 
 ### Database error / corrupt
+
 **Solution**:
+
 ```bash
 # Hapus database dan buat baru:
 rm probe.db
@@ -320,6 +353,7 @@ go run main.go
 ## 📊 Database Schema
 
 ### Table: `urls`
+
 ```sql
 CREATE TABLE urls (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -334,6 +368,7 @@ CREATE TABLE urls (
 ```
 
 ### Table: `settings`
+
 ```sql
 CREATE TABLE settings (
     key TEXT NOT NULL PRIMARY KEY,
@@ -342,6 +377,7 @@ CREATE TABLE settings (
 ```
 
 ### Table: `probe_history`
+
 ```sql
 CREATE TABLE probe_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -355,6 +391,7 @@ CREATE TABLE probe_history (
 ## 🤝 Contributing
 
 Contributions are welcome! Silakan:
+
 1. Fork repository ini
 2. Buat branch baru (`git checkout -b feature/AmazingFeature`)
 3. Commit changes (`git commit -m 'Add some AmazingFeature'`)
@@ -375,6 +412,7 @@ This project is licensed under the MIT License.
 ## 📞 Support
 
 Jika ada pertanyaan atau masalah:
+
 - Email: daffa12k@gmail.com
 
 ---
