@@ -87,20 +87,14 @@ func DoTCPPing(rawURL string) ProbeResult {
 }
 
 // DoICMPProbe is an ICMP-like probe.
-// For now, it performs a TCP dial to a common port as a proxy for reachability.
-// This is NOT a real ICMP ping, which is more complex and may require elevated privileges.
 func DoICMPProbe(target string) ProbeResult {
 	startTime := time.Now()
 
-	// 1. Resolve alamat IP (Bisa input IP langsung atau Domain)
 	ip, err := net.ResolveIPAddr("ip4", target)
 	if err != nil {
 		return ProbeResult{StatusCode: 0, LatencyMs: 0, NetworkErr: true}
 	}
 
-	// 2. Listen ICMP (Membutuhkan akses Privileged/Root di Linux)
-	// Gunakan "udp4" jika ingin mencoba tanpa root (unprivileged),
-	// tapi "ip4:icmp" lebih akurat untuk real ping.
 	network := "ip4:icmp"
 	if runtime.GOOS == "darwin" || runtime.GOOS == "windows" {
 		network = "udp4"
@@ -112,7 +106,6 @@ func DoICMPProbe(target string) ProbeResult {
 	}
 	defer conn.Close()
 
-	// 3. Buat Pesan ICMP Echo Request
 	msg := icmp.Message{
 		Type: ipv4.ICMPTypeEcho, Code: 0,
 		Body: &icmp.Echo{
@@ -122,13 +115,11 @@ func DoICMPProbe(target string) ProbeResult {
 	}
 	msgBytes, _ := msg.Marshal(nil)
 
-	// 4. Kirim dan Set Timeout
 	conn.SetDeadline(time.Now().Add(5 * time.Second))
 	if _, err := conn.WriteTo(msgBytes, ip); err != nil {
 		return ProbeResult{StatusCode: 0, LatencyMs: 0, NetworkErr: true}
 	}
 
-	// 5. Baca Balasan
 	reply := make([]byte, 1500)
 	n, _, err := conn.ReadFrom(reply)
 	duration := time.Since(startTime).Milliseconds()
@@ -137,7 +128,6 @@ func DoICMPProbe(target string) ProbeResult {
 		return ProbeResult{StatusCode: 0, LatencyMs: duration, NetworkErr: true}
 	}
 
-	// 6. Validasi apakah itu Echo Reply
 	rm, err := icmp.ParseMessage(1, reply[:n])
 	if err == nil && rm.Type == ipv4.ICMPTypeEchoReply {
 		return ProbeResult{StatusCode: 200, LatencyMs: duration, NetworkErr: false}
