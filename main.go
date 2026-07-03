@@ -73,7 +73,7 @@ func main() {
 	fs := http.FileServer(http.Dir("./static/"))
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", fs))
 
-	port := ":8080"
+	port := ":3000"
 	log.Printf("Server berjalan di http://localhost%s\n", port)
 	log.Fatal(http.ListenAndServe(port, r))
 }
